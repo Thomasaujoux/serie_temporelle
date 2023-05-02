@@ -158,15 +158,28 @@ apply(as.matrix(models),1, function(m) c("AIC"=AIC(get(m)), "BIC"=BIC(get(m))))
 source(file= "./selection_modele.R",local=TRUE)
 adj_r2(arima401)
 adj_r2(arima103)
-
+# On sélectionne le ARIMA(1,0,3)
 
 
 
 
 #---------------Question 5--------------
-# Il s'agit de montrer que le modèle ARMA(1,1) qu'on a pour la série différenciée est bien causal.
+# Il s'agit de montrer que le modèle ARMA(1,0,3) qu'on a pour la série différenciée est bien causal.
 # Or un ARMA est causal ssi pas de racine dans le disque unité du polynôme phi
+source(file= "./test_causalité.R",local=TRUE)
+arma_causal(arima103) # renvoie TRUE
+
+# Remarque : dans ce cas précis, où le polynôme est de degré 1, il était clair que la racine est en dehors
+# du disque unité, mais l'écriture de cette fonction avait pour but d'écrire une routine généralisable
+
+# Le modèle ARMA pour la série différenciée est causal.
+# Donc, par définition d'un ARIMA, la série non transformée suit un modèle ARIMA(1,1,1).
 
 
+
+
+#---------------PARTIE 3--------------
+#---------------Question 6--------------
+T
 
 
