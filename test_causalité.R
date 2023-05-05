@@ -16,3 +16,5 @@ arma_causal = function(model){
     return(TRUE) #si toutes les racines sont de module strictement supérieur à 1, alors ARMA causal
   }
 }
+
+model = arima401

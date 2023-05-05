@@ -3,13 +3,15 @@
 #--------------Imports des packages--------------------
 rm(list=ls())
 
-#install.packages("fUnitRoots")#tests de racine unitaire plus modulables
+#install.packages("fUnitRoots") #tests de racine unitaire plus modulables
 
 library(zoo) #format de serie temporelle pratique et facile d'utilisation (mais plus volumineux)
 library(tseries) #diverses fonctions sur les series temporelles
 library(fUnitRoots)
 library("polynom")
 library("ggplot2")
+library(forecast)
+library(car)
 
 
 #---------------Mise en place l'espace de travail--------------
@@ -25,16 +27,23 @@ data <- read.csv(datafile,sep=";") #importe un fichier .csv dans un objet de cla
 
 
 #---------------Traitement des données--------------
-data = data[4:220,1:2] # On enlève la dernière colonne avec les codes et les 4 premières lignes inutlies
-colnames(data) <- c("dates","indice")
+data_debut = data[4:218,1:2] # On enlève la dernière colonne avec les codes et les 4 premières lignes inutiles
+last_points = data[219:220,1:2] # On enlève les deux derniers points pour la partie III
+colnames(data_debut) <- c("dates","indice")
+colnames(last_points) <- c("dates","indice")
 
-dates_char <- as.character(data$dates) # Transformation des dates pour les rendre utilisables
+dates_char <- as.character(datadebut$dates) # Transformation des dates pour les rendre utilisables
 dates_char[1] 
 tail(dates_char,1) 
-dates <- as.yearmon(seq(from=2005, to=2022+8/12, by=1/12)) #
-indice <- zoo(as.numeric(data$indice), order.by=dates) #convertit le premier element de data en serie temporelle de type "zoo"
+dates_char <- as.character(last_points$dates) 
+
+dates_debut <- as.yearmon(seq(from=2005, to=2022+11/12, by=1/12))
+dates_last <- as.yearmon(seq(from=2023, to=2023+1/12, by=1/12))
+indice <- zoo(as.numeric(data_debut$indice), order.by=dates_debut) #convertit le premier element de data en serie temporelle de type "zoo"
+last_points <- zoo(as.numeric(last_points$indice), order.by=dates_last) #convertit le premier element de data en serie temporelle de type "zoo"
 
 T <- length(indice)
+
 
 
 #---------------PARTIE 1--------------
@@ -47,12 +56,17 @@ plot.ts(indice, xlab="Années", ylab="Indice brut")
 dindice <- diff(indice,1)
 plot.ts(dindice, xlab="Années", ylab="lag Indice brut")
 # La série en différence première semble être stationnaire.
-# La série est probablement I(1) (à vérifier).
+# La série est probablement I(1) (à vérifier, c'est seulement une première analyse en regardant uniquement la courbe).
+
+
+
 
 #---------------Question 2--------------
 # Etape 1 : Analyse qualitative de la non stationnarité de la série différenciée.
 acf(dindice)  #trace les fonctions d’autocorrélation totale. 
+dev.print(device = png, file = "./Images_pour_rapport/acf_dindice.png", width = 600)
 pacf(dindice)  #trace les fonctions d’autocorrélation partielle.
+dev.print(device = png, file = "./Images_pour_rapport/pacf_dindice.png", width = 600)
 # L’autocorrélation d’ordre 1 (totale ou partielle, c’est la même chose) est d’environ -0.45, soit petite et loin d’être égales à 1. 
 # La série semble donc stationnaire. Vérification du travail précédent.
 
@@ -90,6 +104,7 @@ adf <- adfTest_valid(series,kmax,adftype=adftype)
 
 # Etape 4 : Résultats du test ADF
 adf #affichage des r´esultats du test valide maintenu
+print(paste0("La pvaleur du test ADF est : ", round(adf@test$p.value,digits = 2)))
 # La racine unitaire n’est pas rejetée à un seuil de 95% pour la série en niveau, la série est donc au moins I(1).
 
 
@@ -106,6 +121,7 @@ adf <- adfTest_valid(dindice,24,"nc")
 # Le test ADF avec aucun retard n’est donc pas valide. 
 # Ajoutons des retards de ∆Xt jusqu’à ce que les résidus ne soient plus autocorrélés.
 adf
+print(paste0("La pvaleur du test ADF est : ", round(adf@test$p.value,digits = 2)))
 # Le test rejette la racine unitaire (p-value<0.05), on dira donc que la série différenciée est ”stationnaire”. Indice est donc I(1).
 
 
@@ -139,7 +155,11 @@ source(file= "./validation_parametres.R",local=TRUE)
 armamodels <- armamodelchoice(6,3) 
 # On garde les modèles bien ajustés et valides.
 selec <- armamodels[armamodels[,"ok"]==1&!is.na(armamodels[,"ok"]),] 
-selec
+print("Les modèles valides et ajustés sont")
+print(selec)
+
+
+
 #on a 3 modèles valides et ajustés : ARMA (4,1), ARMA(5,2) et ARMA(1, 3)
 arima401 <- arima(dindice,c(4,0,1))
 arima502 <- arima(dindice, c(5,0,2))
@@ -158,28 +178,56 @@ apply(as.matrix(models),1, function(m) c("AIC"=AIC(get(m)), "BIC"=BIC(get(m))))
 source(file= "./selection_modele.R",local=TRUE)
 adj_r2(arima401)
 adj_r2(arima103)
-# On sélectionne le ARIMA(1,0,3)
+# On sélectionne le ARIMA(4,0,1) qui a le plus grand R2 ajusté
 
 
 
 
 #---------------Question 5--------------
-# Il s'agit de montrer que le modèle ARMA(1,0,3) qu'on a pour la série différenciée est bien causal.
+# Il s'agit de montrer que le modèle ARMA(4,0,1) qu'on a pour la série différenciée est bien causal.
 # Or un ARMA est causal ssi pas de racine dans le disque unité du polynôme phi
 source(file= "./test_causalité.R",local=TRUE)
-arma_causal(arima103) # renvoie TRUE
+arma_causal(arima401) # renvoie TRUE
 
-# Remarque : dans ce cas précis, où le polynôme est de degré 1, il était clair que la racine est en dehors
-# du disque unité, mais l'écriture de cette fonction avait pour but d'écrire une routine généralisable
+png("./Images_pour_rapport/root401.png")
+Arima(dindice, order = c(4, 0, 1), xreg = seq_along(dindice)) %>%
+  autoplot()
+
+dev.off()
 
 # Le modèle ARMA pour la série différenciée est causal.
-# Donc, par définition d'un ARIMA, la série non transformée suit un modèle ARIMA(1,1,1).
+# Donc, par définition d'un ARIMA, la série non transformée suit un modèle ARIMA(4,1,1).
 
 
 
 
 #---------------PARTIE 3--------------
 #---------------Question 6--------------
-T
+T # La longueur de la série
+# On suppose pour la suite que les résidus de la série sont gaussiens.
 
+# Voir rapport pour l'équation
 
+#---------------Question 7--------------
+
+# Voir rapport pour les hypothèses 
+
+#---------------Question 8--------------
+# Représentation graphique de la région pour alpha = 95%
+png("./Images_pour_rapport/ellispe2.png")
+model = arima401
+a <- predict(model, 2)
+df <- data.frame(X_T1 = (-1000:700) / 100, X_T2 = (-1000:700) / 100)
+
+phi <- as.numeric(model$coef[4])
+psi <- as.numeric(model$coef[1])
+sigma_bruit = mean(model$residuals**2)-mean(model$residuals)**2 #variance du bruit blanc
+sigma <- cbind(c(1 + phi + psi, psi + phi), c(psi + phi, 1)) * sigma_bruit
+
+plot(X_T2 ~ X_T1, data = df, type = "n")
+ellipse(center = c(a$pred[2], a$pred[1]), shape = sigma, radius = qchisq(0.05, 2) * model_2$sigma2, draw = TRUE, add = TRUE, lty = 2, fill = TRUE, fill.alpha = 0.1) # nolint
+
+points(a$pred[2], a$pred[1], pch = "+", col = "green")
+points(last_points[2], last_points[1], pch = "+", col = "red")
+
+dev.off()
