@@ -220,7 +220,7 @@ Arima(dindice, order = c(4, 0, 1), xreg = seq_along(dindice), include.mean=F) %>
 
 dev.off()
 
-# Le modèle ARMA pour la série différenciée est causal.
+# Le modèle ARMA pour la série différenciée est causal, toutes les racines sont bien à l'intérieur du cercle unité.
 # Donc, par définition d'un ARIMA, la série non transformée suit un modèle ARIMA(4,1,1).
 
 
