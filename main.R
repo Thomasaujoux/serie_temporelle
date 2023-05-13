@@ -17,7 +17,7 @@ library("polynom")
 library("ggplot2") # Pour l'affichage des courbes
 library(forecast) # Pour la prédiction, dernière partie
 library(car)
-
+library(ellipse)
 
 
 
@@ -41,12 +41,15 @@ data <- read.csv(datafile,sep=";") #importe un fichier .csv dans un objet de cla
 
 
 #---------------Traitement des données--------------
+data_total = data[4:220,1:2]
 data_debut = data[4:218,1:2] # On enlève la dernière colonne avec les codes et les 4 premières lignes inutiles
 data_fin = data[219:220,1:2] # On enlève les deux dernières données pour la partie III
 
+colnames(data_total) <- c("dates","indice")
 colnames(data_debut) <- c("dates","indice")
 colnames(data_fin) <- c("dates","indice")
 
+dates_total <- as.yearmon(seq(from=2005, to=2023, by=1/12))
 dates_debut <- as.yearmon(seq(from=2005, to=2022+10/12, by=1/12))
 dates_fin <- as.yearmon(seq(from=2022+11/12, to=2023, by=1/12))
 indice <- zoo(as.numeric(data_debut$indice), order.by=dates_debut) #convertit les premiers éléments de data en serie temporelle de type "zoo"
@@ -281,20 +284,34 @@ jarque.bera.test(arma$residuals)
 
 #---------------Question 8--------------
 # Représentation graphique de la région pour alpha = 95%
-png("./Images_pour_rapport/ellispe2.png")
-model = arima401
-a <- predict(model, 2)
-df <- data.frame(X_T1 = (-1000:700) / 100, X_T2 = (-1000:700) / 100)
+# On fait les prédictions à horizons 1 et 2 de notre série temporelle
+XT1 = predict (arma, n.ahead=2)$pred[1]
+XT2 = predict (arma, n.ahead=2)$pred[2]
 
-phi <- as.numeric(model$coef[4])
-psi <- as.numeric(model$coef[1])
-sigma_bruit = mean(model$residuals**2)-mean(model$residuals)**2 #variance du bruit blanc
-sigma <- cbind(c(1 + phi + psi, psi + phi), c(psi + phi, 1)) * sigma_bruit
-
-plot(X_T2 ~ X_T1, data = df, type = "n")
-ellipse(center = c(a$pred[2], a$pred[1]), shape = sigma, radius = qchisq(0.05, 2) * model_2$sigma2, draw = TRUE, add = TRUE, lty = 2, fill = TRUE, fill.alpha = 0.1) # nolint
-
-points(a$pred[2], a$pred[1], pch = "+", col = "green")
-points(last_points[2], last_points[1], pch = "+", col = "red")
-
+# On cherche d'abord a tracer le region de confiance univariee 
+# pour la serie originale a 95%.
+png("./Images_pour_rapport/prevision.png")
+arima <- arima(indice,c(4, 1, 1),include.mean=F)
+forecast_indice = forecast(arima, h=2,level=95)
+par(mfrow=c(1,1))
+plot(forecast_indice,col=1,fcol=2,shaded=TRUE,xlab="Temps",ylab="Valeur série temporelle", xlim=c(2018, 2023), main="Prevision pour la série temporelle non différenciée")
 dev.off()
+
+
+
+#Ensuite, on represente la region de confiance bivariee a 95%.
+arma_new = arima0(dindice, order=c(4,0,1))
+# On associe les coefficients phi, psi et sigma2 pour la suite
+phi <- as.numeric(model$coef[1])
+psi <- as.numeric(model$coef[5])
+sigma2 <- as.numeric(arma$sigma2)
+sigma <- matrix (c(sigma2,(phi + psi)*sigma2,(phi + psi)*sigma2,(phi + psi)^2*sigma2 + sigma2),ncol =2)
+Sigma = sigma2 * sigma
+inv_Sigma <- solve(Sigma)
+
+png("./Images_pour_rapport/ellispe.png")
+plot (XT1 ,XT2 , xlim =c(-250, 250) , ylim =c(-250,250) , xlab =" Prevision de X(T+1) sachant T ", ylab ="Prevision de X(T+2) sachant T", main =" Region de confiance bivariee à 95%")
+lines(ellipse(Sigma, centre=c(XT1,XT2)), type="l", col="red", xlab="Xt+1",ylab="Xt+2", main="Ellipse de confiance pour (Xt+1,Xt+2)")
+abline(h=XT1, v=XT2)
+dev.off()
+
