@@ -217,10 +217,11 @@ arma_causal(arima401) # renvoie TRUE
 png("./Images_pour_rapport/root401.png")
 Arima(dindice, order = c(4, 0, 1), xreg = seq_along(dindice), include.mean=F) %>%
   autoplot()
-
+# Cette fonction roduit un graphique des racines inverses AR et MA d'un modèle ARIMA. 
+# Les racines inverses situées en dehors du cercle unitaire sont représentées en rouge.
 dev.off()
 
-# Le modèle ARMA pour la série différenciée est causal, toutes les racines sont bien à l'intérieur du cercle unité.
+# Le modèle ARMA pour la série différenciée est causal, toutes les inverses des racines sont bien à l'intérieur du cercle unité.
 # Donc, par définition d'un ARIMA, la série non transformée suit un modèle ARIMA(4,1,1).
 
 
@@ -305,7 +306,7 @@ arma_new = arima0(dindice, order=c(4,0,1))
 phi <- as.numeric(model$coef[1])
 psi <- as.numeric(model$coef[5])
 sigma2 <- as.numeric(arma$sigma2)
-sigma <- matrix (c(sigma2,(phi + psi)*sigma2,(phi + psi)*sigma2,(phi + psi)^2*sigma2 + sigma2),ncol =2)
+sigma <- matrix (c(sigma2,(phi - psi)*sigma2,(phi - psi)*sigma2,(phi - psi)^2*sigma2 + sigma2),ncol =2)
 Sigma = sigma2 * sigma
 inv_Sigma <- solve(Sigma)
 
