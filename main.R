@@ -23,7 +23,7 @@ library(ellipse)
 
 
 #---------------Mise en place l'espace de travail--------------
-path <- "C:/Users/thoma/Documents/GitHub/serie_temporelle"
+path <- "./serie_temporelle/data/"
 setwd(path) #definit l'espace de travail (working directory ou "wd")
 
 
@@ -63,7 +63,7 @@ T <- length(indice)
 
 
 #---------------PARTIE 1--------------
-#---------------Question 1--------------
+#--------------- 1 --------------
 # On trace la série temporelle pour faire les premières observations qualitatives.
 plot.ts(indice, xlab="Années", ylab="Indice brut")
 # commentaire : la série n'est pas stationnaire
@@ -77,7 +77,7 @@ plot.ts(dindice, xlab="Années", ylab="lag Indice brut")
 
 
 
-#---------------Question 2--------------
+#--------------- 2 --------------
 # Etape 1 : Analyse qualitative de la non stationnarité de la série différenciée.
 acf(dindice)  #trace les fonctions d’autocorrélation totale. 
 dev.print(device = png, file = "./Images_pour_rapport/acf_dindice.png", width = 600)
@@ -145,7 +145,7 @@ print(paste0("La pvaleur du test ADF est : ", round(adf@test$p.value,digits = 2)
 
 
 
-#---------------Question 3--------------
+#--------------- 3 --------------
 p = ggplot(data=indice) + geom_line(aes(x=dates_debut,y=indice))
 p
 ggsave("Serie_brute.png",path="./Images_pour_rapport",width = 10, height = 5)
@@ -161,7 +161,7 @@ ggsave("Serie_differenciee.png",path="./Images_pour_rapport",width = 10, height 
 
 
 #---------------PARTIE 2--------------
-#---------------Question 4--------------
+#--------------- 4 --------------
 # Etape 1 : Détermination des p et q miximaux
 acf(dindice)  #trace les fonctions d’autocorrélation totale. q* = 3
 pacf(dindice)  #trace les fonctions d’autocorrélation partielle. p* = 6
@@ -208,7 +208,7 @@ adj_r2(arima103)
 
 
 
-#---------------Question 5--------------
+#--------------- 5 --------------
 # Il s'agit de montrer que le modèle ARMA(4,0,1) qu'on a pour la série différenciée est bien causal.
 # Or un ARMA est causal ssi pas de racine dans le disque unité du polynôme phi
 source(file= "./test_causalité.R",local=TRUE)
@@ -230,7 +230,7 @@ dev.off()
 
 
 #---------------PARTIE 3--------------
-#---------------Question 6--------------
+#--------------- 6 --------------
 T # La longueur de la série
 # On suppose pour la suite que les résidus de la série sont gaussiens.
 
@@ -242,7 +242,7 @@ T # La longueur de la série
 
 
 
-#---------------Question 7--------------
+#--------------- 7 --------------
 # Voir rapport pour les hypothèses écrites formellement
 # Nous allons tester l'hypothèse concernant les résidus.
 arma <- arima (dindice, c(4,0,1), include.mean=F)
@@ -283,7 +283,7 @@ jarque.bera.test(arma$residuals)
 
 
 
-#---------------Question 8--------------
+#--------------- 8 --------------
 # Représentation graphique de la région pour alpha = 95%
 # On fait les prédictions à horizons 1 et 2 de notre série temporelle
 XT1 = predict (arma, n.ahead=2)$pred[1]
